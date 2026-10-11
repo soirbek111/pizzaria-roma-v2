@@ -1,22 +1,8 @@
-import os
-import sys
-from urllib.parse import urlsplit
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from config.wsgi import application
-
-
 def app(environ, start_response):
-    # A Vercel reescreve a URL para /api/index; aqui restauramos o caminho original
-    original = (
-        environ.get('HTTP_X_VERCEL_FORWARDED_PATH')
-        or environ.get('HTTP_X_MATCHED_PATH')
-        or environ.get('HTTP_X_INVOKE_PATH')
-    )
-    if original:
-        path = urlsplit(original).path
-        if path and not path.startswith('/api/index'):
-            environ['PATH_INFO'] = path
-            environ['RAW_URI'] = original
-    return application(environ, start_response)
+    chaves = ('PATH_INFO', 'RAW_URI', 'REQUEST_URI', 'QUERY_STRING', 'SCRIPT_NAME')
+    linhas = []
+    for k, v in sorted(environ.items()):
+        if k in chaves or any(p in k for p in ('VERCEL', 'FORWARDED', 'PATH', 'URI', 'HOST')):
+            linhas.append(f'{k} = {v}')
+    start_response('200 OK', [('Content-Type', 'text/plain; charset=utf-8')])
+    return ['\n'.join(linhas).encode('utf-8')]
